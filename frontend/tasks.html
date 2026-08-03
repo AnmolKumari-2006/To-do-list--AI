@@ -15,16 +15,14 @@
 <div class="app-shell">
   <aside class="sidebar">
     <div class="brand"><img src="images/logo-light.png" alt="TaskPilot AI" class="brand-logo brand-logo-light"><img src="images/logo-dark.png" alt="TaskPilot AI" class="brand-logo brand-logo-dark"></div>
-    <div class="nav-group">
-      <a class="nav-item" href="index.html"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
-      <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
-      <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
-      <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
-      <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Categories</div>
-      <div class="nav-cats"></div>
+    <div class="sidebar-scroll">
+      <div class="nav-group">
+        <a class="nav-item" href="index.html"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+        <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
+        <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+        <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
+        <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
     </div>
     <div class="sidebar-foot">
       <div class="user-pill">
@@ -60,7 +58,7 @@
       </select>
     </div>
 
-    <div class="chip-row" style="margin-bottom:18px;">
+    <div class="chip-row" style="margin-bottom:12px;">
       <div class="chip active" data-filter="status:all">All</div>
       <div class="chip" data-filter="status:pending">Pending</div>
       <div class="chip" data-filter="status:completed">Completed</div>
@@ -68,6 +66,8 @@
       <div class="chip" data-filter="status:upcoming">Upcoming</div>
       <div class="chip" data-filter="priority:high">High priority</div>
     </div>
+
+    <div class="chip-row" id="categoryChipRow" style="margin-bottom:18px;"></div>
 
     <div class="task-list" id="taskListWrap"></div>
   </main>

@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   wireChips();
   wireSort();
   initSortable();
+  renderCategoryChips();
   renderTaskList();
 });
 
@@ -30,6 +31,29 @@ function wireChips() {
       chip.classList.add("active");
       const [key, val] = chip.dataset.filter.split(":");
       taskFilters[key] = val;
+      renderTaskList();
+    });
+  });
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById("categoryChipRow");
+  if (!wrap) return;
+  const cats = TP.store.getCategories();
+  const active = taskFilters.category;
+
+  wrap.innerHTML = `<div class="chip cat-chip ${!active ? "active" : ""}" data-cat="">All categories</div>` +
+    cats.map(c => `
+      <div class="chip cat-chip ${active === c.id ? "active" : ""}" data-cat="${c.id}">
+        <span class="cat-dot" style="background:${c.color}"></span>${c.name}
+      </div>
+    `).join("");
+
+  wrap.querySelectorAll(".cat-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      wrap.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      taskFilters.category = chip.dataset.cat || null;
       renderTaskList();
     });
   });
