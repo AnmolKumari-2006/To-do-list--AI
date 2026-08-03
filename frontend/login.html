@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<title>Log in · TaskPilot AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth-shell">
+  <div class="auth-visual">
+    <div class="brand"><img src="images/logo-light.png" alt="TaskPilot AI" class="brand-logo brand-logo-light"><img src="images/logo-dark.png" alt="TaskPilot AI" class="brand-logo brand-logo-dark"></div>
+    <div class="pitch">
+      <h1>Your day, prioritized by AI.</h1>
+      <p>TaskPilot reads your deadlines and priorities, then tells you exactly what to do next — no more guessing which task to start.</p>
+    </div>
+    <div class="orbit-card glass c1">
+      <div class="eyebrow" style="margin-bottom:6px;">AI Suggests</div>
+      <div style="font-weight:700;font-size:14px;">Database Assignment</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Nearest deadline · High priority</div>
+    </div>
+    <div class="orbit-card glass c2">
+      <div class="eyebrow" style="margin-bottom:6px;">Today</div>
+      <div style="font-weight:700;font-size:14px;">6 of 8 tasks done</div>
+    </div>
+    <div></div>
+  </div>
+
+  <div class="auth-form-wrap">
+    <div class="auth-form">
+      <h2 class="title">Welcome back</h2>
+      <span class="subtitle">Log in to see what's next on your list.</span>
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input class="input" type="email" id="loginEmail" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input class="input" type="password" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+      </form>
+      <div class="divider-row">or</div>
+      <button class="btn btn-ghost btn-block" type="button"><i class="fa-brands fa-google"></i> Continue with Google</button>
+      <div class="auth-foot">Don't have an account? <a href="register.html">Create one</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

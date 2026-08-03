@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<title>Settings · TaskPilot AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="scrim"></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><img src="images/logo-light.png" alt="TaskPilot AI" class="brand-logo brand-logo-light"><img src="images/logo-dark.png" alt="TaskPilot AI" class="brand-logo brand-logo-dark"></div>
+    <div class="nav-group">
+      <a class="nav-item" href="index.html"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+      <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
+      <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+      <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
+      <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Categories</div>
+      <div class="nav-cats"></div>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-pill">
+        <div class="avatar"></div>
+        <div class="who"><div class="name"></div><div class="email"></div></div>
+        <button class="btn-icon" title="Log out" onclick="location.href='login.html'"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-icon menu-toggle"><i class="fa-solid fa-bars"></i></button>
+        <div class="greeting"><h1>Settings</h1><span class="muted">Manage your account, categories, and preferences.</span></div>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="switch" aria-checked="false"><div class="knob"></div></div>
+      </div>
+    </div>
+
+    <div class="settings-grid">
+      <nav class="settings-nav glass card">
+        <a class="nav-item active" href="#profile"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+        <a class="nav-item" href="#categories"><i class="fa-solid fa-tags"></i><span>Categories</span></a>
+        <a class="nav-item" href="#appearance"><i class="fa-solid fa-palette"></i><span>Appearance</span></a>
+        <a class="nav-item" href="#notifications"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+      </nav>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="glass card" id="profile">
+          <div class="section-head"><h3>Profile</h3></div>
+          <div class="field"><label for="settingsName">Full name</label><input class="input" id="settingsName"></div>
+          <div class="field"><label for="settingsEmail">Email</label><input class="input" id="settingsEmail" type="email"></div>
+          <button class="btn btn-primary" onclick="notify('Profile saved')">Save changes</button>
+        </div>
+
+        <div class="glass card" id="categories">
+          <div class="section-head"><h3>Categories</h3></div>
+          <div id="categoryList"></div>
+          <div class="input-row" style="margin-top:14px; align-items:flex-end;">
+            <div class="field" style="margin-bottom:0;"><label for="newCategoryName">New category</label><input class="input" id="newCategoryName" placeholder="e.g. Finance"></div>
+            <input type="color" id="newCategoryColor" value="#8b6bff" style="width:44px; height:44px; border:none; background:none; border-radius:10px; cursor:pointer;">
+            <button class="btn btn-primary" id="addCategoryBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="glass card" id="appearance">
+          <div class="section-head"><h3>Appearance</h3></div>
+          <div class="setting-row">
+            <div><div class="lbl">Dark mode</div><div class="desc">Switch between light and dark themes.</div></div>
+            <div class="switch" id="darkModeSwitch"><div class="knob"></div></div>
+          </div>
+        </div>
+
+        <div class="glass card" id="notifications">
+          <div class="section-head"><h3>Notifications</h3></div>
+          <div class="setting-row">
+            <div><div class="lbl">Push notifications</div><div class="desc">Get reminders via Firebase Cloud Messaging.</div></div>
+            <div class="switch on" data-pref="push-notifications"><div class="knob"></div></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="lbl">AI daily summary</div><div class="desc">Receive an end-of-day recap of what you completed.</div></div>
+            <div class="switch on" data-pref="daily-summary"><div class="knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>

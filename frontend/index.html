@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<title>Dashboard · TaskPilot AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="scrim"></div>
+<div class="app-shell">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand"><img src="images/logo-light.png" alt="TaskPilot AI" class="brand-logo brand-logo-light"><img src="images/logo-dark.png" alt="TaskPilot AI" class="brand-logo brand-logo-dark"></div>
+    <div class="nav-group">
+      <a class="nav-item" href="index.html"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+      <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
+      <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+      <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
+      <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Categories</div>
+      <div class="nav-cats"></div>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-pill">
+        <div class="avatar"></div>
+        <div class="who"><div class="name"></div><div class="email"></div></div>
+        <button class="btn-icon" title="Log out" onclick="location.href='login.html'"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-icon menu-toggle"><i class="fa-solid fa-bars"></i></button>
+        <div class="greeting">
+          <h1 id="greetingName">Good morning</h1>
+          <span class="muted" id="todayDateLabel"></span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="switch" aria-checked="false" title="Toggle dark / light"><div class="knob"></div></div>
+        <button class="btn btn-primary" data-open-task-modal><i class="fa-solid fa-plus"></i> Quick Add</button>
+      </div>
+    </div>
+
+    <div class="quick-add">
+      <input class="input" id="quickAddInput" placeholder="Type a task and hit Enter — e.g. 'Submit lab report tomorrow 6pm'">
+      <button class="btn btn-ghost" id="quickAddBtn"><i class="fa-solid fa-plus"></i></button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="glass card stat-card" id="dToday">
+        <div class="icon" style="background:rgba(34,211,238,.14); color:#22d3ee;"><i class="fa-solid fa-sun"></i></div>
+        <div class="num">0</div><div class="lbl">Today's Tasks</div>
+      </div>
+      <div class="glass card stat-card" id="dPending">
+        <div class="icon" style="background:rgba(139,107,255,.14); color:#8b6bff;"><i class="fa-solid fa-hourglass-half"></i></div>
+        <div class="num">0</div><div class="lbl">Pending</div>
+      </div>
+      <div class="glass card stat-card" id="dCompleted">
+        <div class="icon" style="background:rgba(47,209,143,.14); color:#2fd18f;"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="num">0</div><div class="lbl">Completed</div>
+      </div>
+      <div class="glass card stat-card" id="dOverdue">
+        <div class="icon" style="background:rgba(251,85,115,.14); color:#fb5573;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="num">0</div><div class="lbl">Overdue</div>
+      </div>
+      <div class="glass card stat-card" id="dUpcoming">
+        <div class="icon" style="background:rgba(246,167,35,.14); color:#f6a723;"><i class="fa-solid fa-calendar-days"></i></div>
+        <div class="num">0</div><div class="lbl">Upcoming</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="glass card">
+        <div class="section-head">
+          <h3>Today's Tasks</h3>
+          <a class="see-all" href="tasks.html">See all</a>
+        </div>
+        <div id="todayTaskList"></div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="glass card ai-card">
+          <span class="tag"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommendation</span>
+          <div id="dashAIRec"><p>Analyzing your workload…</p></div>
+          <button class="btn btn-primary" onclick="window.TP_openAI && window.TP_openAI()">Ask AI what's next</button>
+        </div>
+
+        <div class="glass card">
+          <div class="section-head"><h3>Progress</h3></div>
+          <div class="progress-ring-wrap">
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="54" fill="none" stroke="var(--glass-border)" stroke-width="12"/>
+              <circle id="progressRingCircle" cx="70" cy="70" r="54" fill="none" stroke="url(#grad)" stroke-width="12" stroke-linecap="round" transform="rotate(-90 70 70)"/>
+              <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#8b6bff"/>
+                  <stop offset="100%" stop-color="#22d3ee"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="pct" id="progressRingPct" style="margin-top:-100px;">0%</div>
+            <div class="muted" style="margin-top:36px; font-size:13px;">of today's tasks complete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== AI floating orb + popup ===== -->
+<button class="ai-orb" title="Ask AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+<div class="ai-popup-scrim"></div>
+<div class="ai-popup glass">
+  <div class="ai-popup-head">
+    <div class="h"><span class="mark"><i class="fa-solid fa-sparkles"></i></span> TaskPilot AI</div>
+    <button class="btn-icon ai-popup-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="ai-popup-tabs">
+    <div class="chip active" data-ai-tab="advisor">What should I do next?</div>
+    <div class="chip" data-ai-tab="planner">Daily planner</div>
+  </div>
+  <div class="ai-popup-body">
+    <div data-ai-pane="advisor">
+      <p class="muted" style="font-size:13px;">Gemini reviews priority, deadline, and status to recommend one task.</p>
+      <button class="btn btn-primary btn-block" id="askAIBtn" style="margin-top:12px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI</button>
+      <div id="aiAdviceResult"></div>
+    </div>
+    <div data-ai-pane="planner" class="hidden">
+      <p class="muted" style="font-size:13px;">Generate a time-blocked plan from today's pending tasks.</p>
+      <button class="btn btn-primary btn-block" id="generatePlanBtn" style="margin-top:12px;"><i class="fa-solid fa-calendar-day"></i> Generate Today's Plan</button>
+      <div id="aiPlanResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Task modal ===== -->
+<div class="modal-scrim" id="taskModalScrim">
+  <div class="modal glass">
+    <div class="modal-head">
+      <h3 id="taskModalTitle">Add task</h3>
+      <button class="btn-icon" id="taskModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="taskForm">
+      <div class="modal-body">
+        <div class="field">
+          <label for="taskTitle">Title</label>
+          <input class="input" id="taskTitle" placeholder="e.g. Finish assignment" required>
+        </div>
+        <div class="field">
+          <label for="taskDescription">Description</label>
+          <textarea class="input" id="taskDescription" placeholder="Optional details"></textarea>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label for="taskCategory">Category</label>
+            <select class="input" id="taskCategory"></select>
+          </div>
+          <div class="field">
+            <label>Priority</label>
+            <input type="hidden" id="taskPriority" value="medium">
+            <div class="priority-select">
+              <div class="priority-opt p-high" data-value="high">High</div>
+              <div class="priority-opt p-medium active" data-value="medium">Medium</div>
+              <div class="priority-opt p-low" data-value="low">Low</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field"><label for="taskDueDate">Due date</label><input class="input" type="date" id="taskDueDate"></div>
+          <div class="field"><label for="taskDueTime">Due time</label><input class="input" type="time" id="taskDueTime"></div>
+        </div>
+        <div class="field">
+          <label for="taskReminderTime">Reminder time</label>
+          <input class="input" type="time" id="taskReminderTime">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="taskModalCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/dashboard.js"></script>
+<script>
+  document.getElementById("todayDateLabel").textContent = new Date().toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"});
+</script>
+</body>
+</html>

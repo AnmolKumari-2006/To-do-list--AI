@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<title>Calendar · TaskPilot AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="scrim"></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><img src="images/logo-light.png" alt="TaskPilot AI" class="brand-logo brand-logo-light"><img src="images/logo-dark.png" alt="TaskPilot AI" class="brand-logo brand-logo-dark"></div>
+    <div class="nav-group">
+      <a class="nav-item" href="index.html"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+      <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
+      <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+      <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
+      <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Categories</div>
+      <div class="nav-cats"></div>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-pill">
+        <div class="avatar"></div>
+        <div class="who"><div class="name"></div><div class="email"></div></div>
+        <button class="btn-icon" title="Log out" onclick="location.href='login.html'"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-icon menu-toggle"><i class="fa-solid fa-bars"></i></button>
+        <div class="greeting"><h1>Calendar</h1><span class="muted">Month view — click a date to see its tasks.</span></div>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="switch" aria-checked="false"><div class="knob"></div></div>
+        <button class="btn btn-primary" data-open-task-modal><i class="fa-solid fa-plus"></i> Add Task</button>
+      </div>
+    </div>
+
+    <div class="glass card" style="margin-bottom:20px;">
+      <div class="cal-head">
+        <button class="btn-icon" id="calPrev"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3 id="calLabel" style="font-family:var(--font-display); font-size:18px;"></h3>
+        <button class="btn-icon" id="calNext"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div class="cal-grid" style="margin-bottom:6px;">
+        <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div>
+        <div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="glass card day-panel">
+      <div class="section-head"><h3 id="dayPanelHeading">Today</h3></div>
+      <div id="dayPanelList"></div>
+    </div>
+  </main>
+</div>
+
+<button class="ai-orb" title="Ask AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+<div class="ai-popup-scrim"></div>
+<div class="ai-popup glass">
+  <div class="ai-popup-head">
+    <div class="h"><span class="mark"><i class="fa-solid fa-sparkles"></i></span> TaskPilot AI</div>
+    <button class="btn-icon ai-popup-close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="ai-popup-tabs">
+    <div class="chip active" data-ai-tab="advisor">What should I do next?</div>
+    <div class="chip" data-ai-tab="planner">Daily planner</div>
+  </div>
+  <div class="ai-popup-body">
+    <div data-ai-pane="advisor">
+      <p class="muted" style="font-size:13px;">Gemini reviews priority, deadline, and status to recommend one task.</p>
+      <button class="btn btn-primary btn-block" id="askAIBtn" style="margin-top:12px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI</button>
+      <div id="aiAdviceResult"></div>
+    </div>
+    <div data-ai-pane="planner" class="hidden">
+      <p class="muted" style="font-size:13px;">Generate a time-blocked plan from today's pending tasks.</p>
+      <button class="btn btn-primary btn-block" id="generatePlanBtn" style="margin-top:12px;"><i class="fa-solid fa-calendar-day"></i> Generate Today's Plan</button>
+      <div id="aiPlanResult"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-scrim" id="taskModalScrim">
+  <div class="modal glass">
+    <div class="modal-head">
+      <h3 id="taskModalTitle">Add task</h3>
+      <button class="btn-icon" id="taskModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="taskForm">
+      <div class="modal-body">
+        <div class="field"><label for="taskTitle">Title</label><input class="input" id="taskTitle" placeholder="e.g. Finish assignment" required></div>
+        <div class="field"><label for="taskDescription">Description</label><textarea class="input" id="taskDescription" placeholder="Optional details"></textarea></div>
+        <div class="input-row">
+          <div class="field"><label for="taskCategory">Category</label><select class="input" id="taskCategory"></select></div>
+          <div class="field">
+            <label>Priority</label>
+            <input type="hidden" id="taskPriority" value="medium">
+            <div class="priority-select">
+              <div class="priority-opt p-high" data-value="high">High</div>
+              <div class="priority-opt p-medium active" data-value="medium">Medium</div>
+              <div class="priority-opt p-low" data-value="low">Low</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field"><label for="taskDueDate">Due date</label><input class="input" type="date" id="taskDueDate"></div>
+          <div class="field"><label for="taskDueTime">Due time</label><input class="input" type="time" id="taskDueTime"></div>
+        </div>
+        <div class="field"><label for="taskReminderTime">Reminder time</label><input class="input" type="time" id="taskReminderTime"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="taskModalCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/calendar.js"></script>
+<script>
+  window.addEventListener("tp:tasks-changed", () => { if (typeof renderCalendar === "function") renderCalendar(); });
+</script>
+</body>
+</html>
