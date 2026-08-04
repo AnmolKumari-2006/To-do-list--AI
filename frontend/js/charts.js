@@ -2,8 +2,16 @@
    TaskPilot AI — Statistics charts (Chart.js)
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (!window.Chart) return;
+  await TP.store.syncFromServer();
+  renderStatCards();
+  renderPieChart();
+  renderBarChart();
+});
+
+window.addEventListener("tp:tasks-changed", async () => {
+  await TP.store.syncFromServer();
   renderStatCards();
   renderPieChart();
   renderBarChart();

@@ -11,12 +11,13 @@ async function initApp() {
 
   applyTheme(TP.store.getTheme());
   renderUserPill();
-  renderSidebarCategories();
+  await TP.store.syncFromServer();
   wireThemeToggle();
   wireMobileNav();
   wireAIOrb();
   wireTaskModal();
   highlightActiveNav();
+  renderOnboardingHint();
 }
 
 async function ensureAuthenticated() {
@@ -69,16 +70,39 @@ function renderUserPill() {
   pill.querySelector(".email").textContent = user.email;
 }
 
-function renderSidebarCategories() {
-  const wrap = document.querySelector(".nav-cats");
-  if (!wrap) return;
-  const cats = TP.store.getCategories();
-  wrap.innerHTML = cats.map(c => `
-    <a class="nav-item" href="tasks.html?category=${c.id}">
-      <span class="cat-dot" style="background:${c.color}"></span>
-      <span>${c.name}</span>
-    </a>
-  `).join("");
+async function logoutUser() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+  } catch (err) {
+    console.warn(err);
+  }
+  TP.store.clearUser();
+  location.href = "/login.html";
+}
+
+function renderOnboardingHint() {
+  const user = TP.store.getUser();
+  if (!user || location.pathname.includes("tasks.html") || location.pathname.includes("calendar.html") || location.pathname.includes("statistics.html") || location.pathname.includes("settings.html")) return;
+  const welcomeKey = `taskpilot_welcome_seen:${user.id}`;
+  const hasSeenWelcome = localStorage.getItem(welcomeKey);
+  if (hasSeenWelcome) return;
+
+  const welcome = document.createElement("div");
+  welcome.className = "glass card";
+  welcome.style.marginBottom = "20px";
+  welcome.innerHTML = `
+    <div class="section-head"><h3>Welcome to TaskPilot AI</h3><button class="btn-icon" onclick="this.parentElement.parentElement.remove(); localStorage.setItem('${welcomeKey}','true')"><i class="fa-solid fa-xmark"></i></button></div>
+    <p class="muted" style="margin:0 0 10px;">Start by adding your first task, organizing categories, and using the dashboard to track progress.</p>
+    <div class="chip">Getting started</div>
+    <div class="chip">Create tasks</div>
+    <div class="chip">Track progress</div>
+  `;
+
+  const main = document.querySelector(".main");
+  if (main) {
+    main.insertBefore(welcome, main.firstChild.nextSibling);
+    localStorage.setItem(welcomeKey, "true");
+  }
 }
 
 function highlightActiveNav() {
@@ -94,12 +118,6 @@ function highlightActiveNav() {
 
   // Category links — match by page AND category, so only the selected
   // category (if any) gets highlighted, never all of them at once.
-  document.querySelectorAll(".nav-cats .nav-item[href]").forEach(el => {
-    const url = new URL(el.getAttribute("href"), location.href);
-    const linkPage = url.pathname.split("/").pop();
-    const linkCategory = url.searchParams.get("category");
-    if (linkPage === page && linkCategory === currentCategory) el.classList.add("active");
-  });
 }
 
 function wireMobileNav() {
@@ -209,13 +227,13 @@ function wireTaskModal() {
     });
   });
 
-  form?.addEventListener("submit", (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = form.dataset.editingId;
     const payload = {
       title: document.getElementById("taskTitle").value.trim(),
       description: document.getElementById("taskDescription").value.trim(),
-      category: document.getElementById("taskCategory").value,
+      category: document.getElementById("taskCategory").value || null,
       priority: document.getElementById("taskPriority").value,
       due_date: document.getElementById("taskDueDate").value,
       due_time: document.getElementById("taskDueTime").value,
@@ -223,15 +241,19 @@ function wireTaskModal() {
     };
     if (!payload.title) { notify("Task title is required", "error"); return; }
 
-    if (id) {
-      TP.store.updateTask(id, payload);
-      notify("Task updated");
-    } else {
-      TP.store.addTask(payload);
-      notify("Task added");
+    try {
+      if (id) {
+        await TP.store.updateTask(id, payload);
+        notify("Task updated");
+      } else {
+        await TP.store.addTask(payload);
+        notify("Task added");
+      }
+      closeTaskModal();
+      window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
+    } catch (err) {
+      notify(err.message || "Could not save task", "error");
     }
-    closeTaskModal();
-    window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
   });
 }
 
@@ -280,8 +302,12 @@ function deleteTaskConfirm(id) {
     doDelete(id);
   }
 }
-function doDelete(id) {
-  TP.store.deleteTask(id);
-  notify("Task deleted", "info");
-  window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
+async function doDelete(id) {
+  try {
+    await TP.store.deleteTask(id);
+    notify("Task deleted", "info");
+    window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
+  } catch (err) {
+    notify(err.message || "Could not delete task", "error");
+  }
 }

@@ -4,7 +4,7 @@
 
 let calState = { year: null, month: null, selected: null };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const grid = document.getElementById("calGrid");
   if (!grid) return;
 
@@ -16,6 +16,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("calPrev")?.addEventListener("click", () => shiftMonth(-1));
   document.getElementById("calNext")?.addEventListener("click", () => shiftMonth(1));
 
+  await TP.store.syncFromServer();
+  renderCalendar();
+});
+
+window.addEventListener("tp:tasks-changed", async () => {
+  await TP.store.syncFromServer();
   renderCalendar();
 });
 
@@ -94,7 +100,7 @@ function renderDayPanel() {
   }
   panel.innerHTML = dayTasks.map(t => `
     <div class="task-row ${t.status === "completed" ? "done" : ""}">
-      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="TP.store.toggleComplete('${t.id}'); renderCalendar();"><i class="fa-solid fa-check"></i></div>
+      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="(async()=>{await TP.store.toggleComplete('${t.id}'); renderCalendar();})()"><i class="fa-solid fa-check"></i></div>
       <div class="body">
         <div class="t-title">${t.title}</div>
         <div class="t-meta">${categoryTag(t.category)}<span>·</span>${priorityBadge(t.priority)}${t.due_time ? `<span>· ${t.due_time}</span>` : ""}</div>

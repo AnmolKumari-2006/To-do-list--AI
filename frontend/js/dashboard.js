@@ -2,8 +2,9 @@
    TaskPilot AI — Dashboard rendering
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   renderGreeting();
+  await TP.store.syncFromServer();
   renderDashStats();
   renderTodayList();
   renderProgressRing();
@@ -11,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
   wireQuickAdd();
 });
 
-window.addEventListener("tp:tasks-changed", () => {
+window.addEventListener("tp:tasks-changed", async () => {
+  await TP.store.syncFromServer();
   renderDashStats();
   renderTodayList();
   renderProgressRing();
@@ -24,7 +26,8 @@ function renderGreeting() {
   const user = TP.store.getUser();
   const hour = new Date().getHours();
   const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  el.textContent = `Good ${part}, ${user.name.split(" ")[0]}`;
+  const name = user?.name ? user.name.split(" ")[0] : "there";
+  el.textContent = `Good ${part}, ${name}`;
 }
 
 function renderDashStats() {
@@ -56,7 +59,7 @@ function renderTodayList() {
   }
   wrap.innerHTML = tasks.map(t => `
     <div class="task-row ${t.status === "completed" ? "done" : ""}">
-      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="TP.store.toggleComplete('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));"><i class="fa-solid fa-check"></i></div>
+      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="(async()=>{await TP.store.toggleComplete('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));})()"><i class="fa-solid fa-check"></i></div>
       <div class="body" onclick="editTask('${t.id}')" style="cursor:pointer;">
         <div class="t-title">${t.title}</div>
         <div class="t-meta">${categoryTag(t.category)}<span>·</span>${priorityBadge(t.priority)}${t.due_time ? `<span>· ${t.due_time}</span>` : ""}</div>
@@ -93,13 +96,18 @@ function wireQuickAdd() {
   const input = document.getElementById("quickAddInput");
   const btn = document.getElementById("quickAddBtn");
   if (!input || !btn) return;
-  const submit = () => {
+  const submit = async () => {
     const title = input.value.trim();
     if (!title) return;
-    TP.store.addTask({ title, category: TP.store.getCategories()[0].id, priority: "medium", due_date: TP.todayISO(0) });
-    input.value = "";
-    notify("Task added");
-    window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
+    try {
+      const category = TP.store.getCategories()[0]?.id || null;
+      await TP.store.addTask({ title, category, priority: "medium", due_date: TP.todayISO(0) });
+      input.value = "";
+      notify("Task added");
+      window.dispatchEvent(new CustomEvent("tp:tasks-changed"));
+    } catch (err) {
+      notify(err.message || "Could not create task", "error");
+    }
   };
   btn.addEventListener("click", submit);
   input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });

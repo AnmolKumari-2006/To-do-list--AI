@@ -1,20 +1,11 @@
 /* =========================================================
-   TaskPilot AI — Mock Data Store
-   Stand-in for the Flask REST API during frontend-only work.
-   Everything reads/writes through TP.store so swapping in
-   real fetch() calls later only touches this one file.
+   TaskPilot AI — Backend-backed store
+   The frontend now reads/writes through the Flask API so
+   each signed-in account only sees its own data.
    ========================================================= */
 
 const TP = (function () {
   const LS_KEY = "taskpilot_v1";
-
-  const DEFAULT_CATEGORIES = [
-    { id: "study", name: "Study", color: "#8b6bff", icon: "fa-book" },
-    { id: "work", name: "Work", color: "#22d3ee", icon: "fa-briefcase" },
-    { id: "personal", name: "Personal", color: "#f6a723", icon: "fa-user" },
-    { id: "shopping", name: "Shopping", color: "#fb5573", icon: "fa-bag-shopping" },
-    { id: "health", name: "Health", color: "#2fd18f", icon: "fa-heart-pulse" },
-  ];
 
   function todayISO(offsetDays = 0) {
     const d = new Date();
@@ -22,31 +13,10 @@ const TP = (function () {
     return d.toISOString().slice(0, 10);
   }
 
-  function seedTasks() {
-    return [
-      { id: cryptoId(), title: "Submit Database Assignment", description: "Normalize schema to 3NF and push to GitHub.", category: "study", priority: "high", due_date: todayISO(0), due_time: "18:00", reminder_time: "17:00", status: "pending", pinned: true, created_at: Date.now() - 90000 },
-      { id: cryptoId(), title: "Team standup notes", description: "Summarize sprint blockers for the AI module.", category: "work", priority: "medium", due_date: todayISO(0), due_time: "10:00", reminder_time: "", status: "completed", pinned: false, created_at: Date.now() - 800000 },
-      { id: cryptoId(), title: "Buy groceries", description: "Milk, eggs, coffee, fruit.", category: "shopping", priority: "low", due_date: todayISO(1), due_time: "", reminder_time: "", status: "pending", pinned: false, created_at: Date.now() - 500000 },
-      { id: cryptoId(), title: "Gym — leg day", description: "", category: "health", priority: "medium", due_date: todayISO(0), due_time: "19:00", reminder_time: "18:30", status: "pending", pinned: false, created_at: Date.now() - 300000 },
-      { id: cryptoId(), title: "Prepare AI Advisor demo", description: "Record a 2-minute walkthrough of the recommendation flow.", category: "study", priority: "high", due_date: todayISO(2), due_time: "12:00", reminder_time: "", status: "pending", pinned: false, created_at: Date.now() - 200000 },
-      { id: cryptoId(), title: "Pay electricity bill", description: "", category: "personal", priority: "medium", due_date: todayISO(-1), due_time: "", reminder_time: "", status: "pending", pinned: false, created_at: Date.now() - 700000 },
-      { id: cryptoId(), title: "Plan weekend trip", description: "Shortlist 2 hill-station options.", category: "personal", priority: "low", due_date: todayISO(4), due_time: "", reminder_time: "", status: "pending", pinned: false, created_at: Date.now() - 100000 },
-    ];
-  }
-
-  function cryptoId() {
-    return "t_" + Math.random().toString(36).slice(2, 10);
-  }
-
   function load() {
-    let raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(LS_KEY);
     if (!raw) {
-      const seed = {
-        user: null,
-        theme: "dark",
-        categories: DEFAULT_CATEGORIES,
-        tasks: seedTasks(),
-      };
+      const seed = { user: null, theme: "dark", categories: [], tasks: [] };
       localStorage.setItem(LS_KEY, JSON.stringify(seed));
       return seed;
     }
@@ -64,73 +34,115 @@ const TP = (function () {
 
   let db = load();
 
+  async function fetchJson(url, options = {}) {
+    const res = await fetch(url, { credentials: "same-origin", ...options });
+    if (res.status === 401) {
+      const authPages = ["/login.html", "/register.html", "/"];
+      if (!authPages.some(page => window.location.pathname.endsWith(page))) {
+        db.user = null;
+        db.categories = [];
+        db.tasks = [];
+        save(db);
+        window.location.href = "/login.html";
+      }
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Not logged in.");
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
   const store = {
-    // ---- theme ----
     getTheme() { return db.theme || "dark"; },
     setTheme(t) { db.theme = t; save(db); },
 
-    // ---- user ----
     getUser() { return db.user; },
-    setUserFromServer(user) { db.user = user; save(db); },
-    clearUser() { db.user = null; save(db); },
+    setUserFromServer(user) {
+      db.user = user;
+      if (user?.theme) db.theme = user.theme;
+      save(db);
+    },
+    clearUser() { db.user = null; db.categories = []; db.tasks = []; save(db); },
 
-    // ---- categories ----
     getCategories() { return db.categories; },
-    addCategory(cat) { db.categories.push(cat); save(db); },
-    updateCategory(id, patch) {
-      db.categories = db.categories.map(c => c.id === id ? { ...c, ...patch } : c);
-      save(db);
-    },
-    deleteCategory(id) {
-      db.categories = db.categories.filter(c => c.id !== id);
-      save(db);
-    },
-    getCategory(id) { return db.categories.find(c => c.id === id); },
+    getCategory(id) { return db.categories.find(c => String(c.id) === String(id)); },
 
-    // ---- tasks ----
-    getTasks() { return db.tasks; },
-    getTask(id) { return db.tasks.find(t => t.id === id); },
-    addTask(task) {
-      const t = {
-        id: cryptoId(),
-        status: "pending",
-        pinned: false,
-        created_at: Date.now(),
-        updated_at: Date.now(),
-        ...task,
-      };
-      db.tasks.unshift(t);
-      save(db);
-      return t;
+    async syncFromServer() {
+      try {
+        const [catData, taskData] = await Promise.all([
+          fetchJson("/api/categories"),
+          fetchJson("/api/tasks"),
+        ]);
+        db.categories = (catData.categories || []).map(c => ({ ...c, id: Number(c.id) }));
+        db.tasks = (taskData.tasks || []).map(t => ({ ...t, id: Number(t.id), category: t.category ?? null }));
+        save(db);
+        return { categories: db.categories, tasks: db.tasks };
+      } catch (err) {
+        console.error(err);
+        return { categories: db.categories, tasks: db.tasks };
+      }
     },
-    updateTask(id, patch) {
-      db.tasks = db.tasks.map(t => t.id === id ? { ...t, ...patch, updated_at: Date.now() } : t);
+
+    async addCategory(payload) {
+      const data = await fetchJson("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const category = { ...data.category, id: Number(data.category.id) };
+      db.categories.push(category);
+      save(db);
+      return category;
+    },
+
+    async deleteCategory(id) {
+      await fetchJson(`/api/categories/${id}`, { method: "DELETE" });
+      db.categories = db.categories.filter(c => String(c.id) !== String(id));
+      db.tasks = db.tasks.map(t => String(t.category) === String(id) ? { ...t, category: null } : t);
       save(db);
     },
-    deleteTask(id) {
-      db.tasks = db.tasks.filter(t => t.id !== id);
+
+    async addTask(task) {
+      const data = await fetchJson("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(task) });
+      const created = { ...data.task, id: Number(data.task.id), category: data.task.category ?? null };
+      db.tasks.unshift(created);
+      save(db);
+      return created;
+    },
+
+    async updateTask(id, patch) {
+      const data = await fetchJson(`/api/tasks/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+      const updated = { ...data.task, id: Number(data.task.id), category: data.task.category ?? null };
+      db.tasks = db.tasks.map(t => String(t.id) === String(id) ? updated : t);
+      save(db);
+      return updated;
+    },
+
+    async deleteTask(id) {
+      await fetchJson(`/api/tasks/${id}`, { method: "DELETE" });
+      db.tasks = db.tasks.filter(t => String(t.id) !== String(id));
       save(db);
     },
-    duplicateTask(id) {
-      const t = store.getTask(id);
-      if (!t) return;
-      const copy = { ...t, id: cryptoId(), title: t.title + " (copy)", created_at: Date.now(), status: "pending" };
-      db.tasks.unshift(copy);
-      save(db);
+
+    async duplicateTask(id) {
+      const source = db.tasks.find(t => String(t.id) === String(id));
+      if (!source) return null;
+      const copy = await store.addTask({ ...source, title: `${source.title} (copy)`, status: "pending" });
       return copy;
     },
-    toggleComplete(id) {
-      const t = store.getTask(id);
-      if (!t) return;
-      store.updateTask(id, { status: t.status === "completed" ? "pending" : "completed" });
-    },
-    togglePin(id) {
-      const t = store.getTask(id);
-      if (!t) return;
-      store.updateTask(id, { pinned: !t.pinned });
+
+    async toggleComplete(id) {
+      const task = db.tasks.find(t => String(t.id) === String(id));
+      if (!task) return;
+      return store.updateTask(id, { status: task.status === "completed" ? "pending" : "completed" });
     },
 
-    // ---- derived ----
+    async togglePin(id) {
+      const task = db.tasks.find(t => String(t.id) === String(id));
+      if (!task) return;
+      return store.updateTask(id, { pinned: !task.pinned });
+    },
+
+    getTasks() { return db.tasks; },
+    getTask(id) { return db.tasks.find(t => String(t.id) === String(id)); },
+
     counts() {
       const tasks = db.tasks;
       const today = todayISO(0);
@@ -147,5 +159,5 @@ const TP = (function () {
     todayISO,
   };
 
-  return { store, todayISO, cryptoId };
+  return { store, todayISO, cryptoId: () => Math.random().toString(36).slice(2, 10) };
 })();

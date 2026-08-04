@@ -4,19 +4,25 @@
 
 let taskFilters = { search: "", status: "all", priority: "all", sort: "due_date" };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(location.search);
-  if (params.get("category")) taskFilters.category = params.get("category");
+  const categoryParam = params.get("category");
+  if (categoryParam) taskFilters.category = Number(categoryParam) || categoryParam;
 
   wireSearch();
   wireChips();
   wireSort();
   initSortable();
+  await TP.store.syncFromServer();
   renderCategoryChips();
   renderTaskList();
 });
 
-window.addEventListener("tp:tasks-changed", renderTaskList);
+window.addEventListener("tp:tasks-changed", async () => {
+  await TP.store.syncFromServer();
+  renderCategoryChips();
+  renderTaskList();
+});
 
 function wireSearch() {
   const input = document.getElementById("taskSearch");
@@ -53,7 +59,7 @@ function renderCategoryChips() {
     chip.addEventListener("click", () => {
       wrap.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
       chip.classList.add("active");
-      taskFilters.category = chip.dataset.cat || null;
+      taskFilters.category = chip.dataset.cat ? Number(chip.dataset.cat) || chip.dataset.cat : null;
       renderTaskList();
     });
   });
@@ -80,7 +86,7 @@ function getFilteredTasks() {
   let tasks = [...TP.store.getTasks()];
   const today = TP.todayISO(0);
 
-  if (taskFilters.category) tasks = tasks.filter(t => t.category === taskFilters.category);
+  if (taskFilters.category) tasks = tasks.filter(t => String(t.category) === String(taskFilters.category));
   if (taskFilters.search) tasks = tasks.filter(t =>
     t.title.toLowerCase().includes(taskFilters.search) ||
     (t.description || "").toLowerCase().includes(taskFilters.search) ||
@@ -122,7 +128,7 @@ function renderTaskList() {
   wrap.innerHTML = tasks.map(t => `
     <div class="task-card glass ${t.status === "completed" ? "done" : ""} ${t.pinned ? "pinned" : ""}" data-id="${t.id}">
       <div class="grip"><i class="fa-solid fa-grip-vertical"></i></div>
-      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="TP.store.toggleComplete('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));"><i class="fa-solid fa-check"></i></div>
+      <div class="check ${t.status === "completed" ? "done" : ""}" onclick="(async()=>{await TP.store.toggleComplete('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));})()"><i class="fa-solid fa-check"></i></div>
       <div class="content">
         <div class="row1">
           <div class="t-title">${t.pinned ? '<i class="fa-solid fa-thumbtack" style="font-size:11px;color:var(--violet);margin-right:6px;"></i>' : ""}${t.title}</div>
@@ -135,8 +141,8 @@ function renderTaskList() {
         </div>
       </div>
       <div class="actions">
-        <button class="btn-icon" title="Pin" onclick="TP.store.togglePin('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));"><i class="fa-solid fa-thumbtack"></i></button>
-        <button class="btn-icon" title="Duplicate" onclick="TP.store.duplicateTask('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));"><i class="fa-regular fa-copy"></i></button>
+        <button class="btn-icon" title="Pin" onclick="(async()=>{await TP.store.togglePin('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));})()"><i class="fa-solid fa-thumbtack"></i></button>
+        <button class="btn-icon" title="Duplicate" onclick="(async()=>{await TP.store.duplicateTask('${t.id}'); window.dispatchEvent(new CustomEvent('tp:tasks-changed'));})()"><i class="fa-regular fa-copy"></i></button>
         <button class="btn-icon" title="Edit" onclick="editTask('${t.id}')"><i class="fa-regular fa-pen-to-square"></i></button>
         <button class="btn-icon" title="Delete" onclick="deleteTaskConfirm('${t.id}')"><i class="fa-regular fa-trash-can"></i></button>
       </div>
