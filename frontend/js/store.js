@@ -42,7 +42,7 @@ const TP = (function () {
     let raw = localStorage.getItem(LS_KEY);
     if (!raw) {
       const seed = {
-        user: { name: "Ayesha Raza", email: "ayesha@example.com" },
+        user: null,
         theme: "dark",
         categories: DEFAULT_CATEGORIES,
         tasks: seedTasks(),
@@ -71,6 +71,8 @@ const TP = (function () {
 
     // ---- user ----
     getUser() { return db.user; },
+    setUserFromServer(user) { db.user = user; save(db); },
+    clearUser() { db.user = null; save(db); },
 
     // ---- categories ----
     getCategories() { return db.categories; },

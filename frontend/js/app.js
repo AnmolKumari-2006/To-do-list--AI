@@ -3,7 +3,12 @@
    Include after store.js on every app page (not on login/register).
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", initApp);
+
+async function initApp() {
+  const authenticated = await ensureAuthenticated();
+  if (!authenticated) return;
+
   applyTheme(TP.store.getTheme());
   renderUserPill();
   renderSidebarCategories();
@@ -12,7 +17,30 @@ document.addEventListener("DOMContentLoaded", () => {
   wireAIOrb();
   wireTaskModal();
   highlightActiveNav();
-});
+}
+
+async function ensureAuthenticated() {
+  try {
+    const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+    if (!res.ok) {
+      TP.store.clearUser();
+      location.href = "/login.html";
+      return false;
+    }
+    const data = await res.json();
+    if (data.user) {
+      TP.store.setUserFromServer(data.user);
+      return true;
+    }
+  } catch (err) {
+    TP.store.clearUser();
+    location.href = "/login.html";
+    return false;
+  }
+  TP.store.clearUser();
+  location.href = "/login.html";
+  return false;
+}
 
 /* ---------------- theme ---------------- */
 function applyTheme(theme) {
