@@ -24,5 +24,11 @@ with app.app_context():
     res5 = client.get('/api/auth/me')
     print('me after login', res5.status_code, res5.get_json())
 
-    res6 = client.get('/api/auth/google/login')
-    print('google login redirect', res6.status_code, res6.headers.get('Location'))
+    res6 = client.post('/api/tasks', json={'title': 'Test Task After Login'})
+    print('create task after login', res6.status_code, res6.get_json())
+
+    res7 = client.post('/api/tasks', json={'title': 'Test Task After Login Again'})
+    print('create another task after login', res7.status_code, res7.get_json())
+
+    res8 = client.get('/api/auth/google/login')
+    print('google login redirect', res8.status_code, res8.headers.get('Location'))

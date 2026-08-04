@@ -48,8 +48,10 @@ def create_app():
     # --- API routes ----------------------------------------------------
     from routes_health import health_bp
     from routes_auth import auth_bp
+    from routes_data import data_bp
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(data_bp, url_prefix="/api")
 
     return app
 

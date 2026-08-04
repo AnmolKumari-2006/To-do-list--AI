@@ -84,6 +84,33 @@ def me():
     return jsonify({"user": user.to_dict()}), 200
 
 
+@auth_bp.route("/profile", methods=["PUT"])
+def update_profile():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not logged in."}), 401
+
+    user = db.session.get(User, user_id)
+    if not user:
+        session.clear()
+        return jsonify({"error": "Not logged in."}), 401
+
+    data = request.get_json(silent=True) or {}
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": "Name is required."}), 400
+        user.name = name
+    if "theme" in data:
+        theme = (data.get("theme") or "dark").strip().lower()
+        if theme not in {"dark", "light"}:
+            return jsonify({"error": "Theme must be dark or light."}), 400
+        user.theme = theme
+
+    db.session.commit()
+    return jsonify({"user": user.to_dict()}), 200
+
+
 # ---------------------------------------------------------------------------
 # Google Sign-In
 # ---------------------------------------------------------------------------
