@@ -1,9 +1,13 @@
+import atexit
 import os
+from datetime import datetime
 from flask import Flask, send_from_directory, request, redirect, session
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 from config import Config
 from extensions import db
-from models import User, Category, Task
+from models import Notification, User, Category, Task
 from seed import seed_demo_data
 
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
@@ -53,7 +57,44 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(data_bp, url_prefix="/api")
 
+    if os.environ.get("WERKZEUG_RUN_MAIN") or not app.debug:
+        start_notification_scheduler(app)
+
     return app
+
+
+def _send_due_notifications(app):
+    with app.app_context():
+        now = datetime.now()
+        due_notifications = Notification.query.filter(
+            Notification.status == "pending",
+            Notification.remind_at <= now,
+        ).all()
+        if not due_notifications:
+            return
+
+        for notice in due_notifications:
+            app.logger.info(
+                "Reminder ready for notification %s for task %s user %s: %s",
+                notice.id,
+                notice.task_id,
+                notice.user_id,
+                notice.message,
+            )
+
+
+def start_notification_scheduler(app):
+    scheduler = BackgroundScheduler(timezone="UTC")
+    scheduler.add_job(
+        func=_send_due_notifications,
+        trigger=IntervalTrigger(minutes=1),
+        args=[app],
+        id="notification_dispatcher",
+        replace_existing=True,
+    )
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown(wait=False))
+    app.logger.info("Notification scheduler started")
 
 
 if __name__ == "__main__":
