@@ -25,6 +25,10 @@ window.addEventListener("tp:tasks-changed", async () => {
   renderCalendar();
 });
 
+window.addEventListener("tp:time-updated", async () => {
+  renderCalendar();
+});
+
 function shiftMonth(delta) {
   calState.month += delta;
   if (calState.month < 0) { calState.month = 11; calState.year--; }
@@ -65,12 +69,14 @@ function renderCalendar() {
     if (!c.iso) return `<div class="cal-cell muted-cell"><span class="d-num">${c.day}</span></div>`;
     const dayTasks = tasks.filter(t => t.due_date === c.iso);
     const dots = dayTasks.slice(0, 4).map(t => `<span style="background:${catColor(t.category)}"></span>`).join("");
+    const extra = dayTasks.length > 4 ? `<div class="cal-badge">+${dayTasks.length - 4}</div>` : "";
     const classes = ["cal-cell"];
     if (c.iso === todayIso) classes.push("today");
     if (c.iso === calState.selected) classes.push("selected");
     return `<div class="${classes.join(" ")}" onclick="selectCalDay('${c.iso}')">
       <span class="d-num">${c.day}</span>
       <div class="cal-dots">${dots}</div>
+      ${extra}
     </div>`;
   }).join("");
 

@@ -18,6 +18,118 @@ async function initApp() {
   wireTaskModal();
   highlightActiveNav();
   renderOnboardingHint();
+  wireTimeRefresh();
+  wireReminderPolling();
+}
+
+function wireTimeRefresh() {
+  setInterval(() => window.dispatchEvent(new CustomEvent("tp:time-updated")), 30000);
+}
+
+async function fetchDueNotifications() {
+  try {
+    const res = await fetch("/api/notifications/due", { credentials: "same-origin" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.notifications || [];
+  } catch (err) {
+    console.error("Failed to fetch reminders", err);
+    return [];
+  }
+}
+
+function isReminderAlertsEnabled() {
+  return localStorage.getItem("reminder-alerts") !== "off";
+}
+
+function isReminderSoundEnabled() {
+  return localStorage.getItem("reminder-sound") !== "off";
+}
+
+function playReminderSound() {
+  if (!window.AudioContext && !window.webkitAudioContext) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const context = new AudioCtx();
+    const now = context.currentTime;
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + 0.45);
+
+    const frequencies = [440, 660, 880];
+    const oscillators = frequencies.map(freq => {
+      const osc = context.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(now);
+      osc.stop(now + 0.45);
+      return osc;
+    });
+
+    gain.connect(context.destination);
+    setTimeout(() => {
+      context.close().catch(() => {});
+    }, 500);
+  } catch (err) {
+    console.warn("Reminder sound failed", err);
+  }
+}
+
+function updateNotificationBadge(count) {
+  const badge = document.querySelector('.nav-item[href="notifications.html"] .nav-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.add("show");
+  } else {
+    badge.textContent = "";
+    badge.classList.remove("show");
+  }
+}
+
+function presentReminderNotification(notification) {
+  if (!isReminderAlertsEnabled()) return;
+  const timeLabel = notification.remind_at ? new Date(notification.remind_at).toLocaleString() : "";
+  const taskTitle = notification.message?.replace(/^Reminder:\s*/, "") || "Your task";
+  const title = "Task Reminder";
+  const body = `
+    <strong>${taskTitle}</strong>
+    <div style="font-size:0.88rem; color:var(--text-mid); margin-top:8px; line-height:1.4;">
+      Your task is due soon. Please complete it before the deadline.${timeLabel ? ` <span style="display:block; margin-top:4px;">${timeLabel}</span>` : ""}
+    </div>
+  `;
+  if (window.Swal) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "info",
+      title,
+      html: body,
+      showConfirmButton: false,
+      timer: 9000,
+      timerProgressBar: true,
+      background: "var(--bg-1)",
+      color: "var(--text-hi)",
+      customClass: { popup: "reminder-toast" },
+    });
+  } else {
+    notify(`Your task is due soon. Complete ${taskTitle} before the deadline.${timeLabel ? ` (${timeLabel})` : ""}`, "info");
+  }
+  if (isReminderSoundEnabled()) playReminderSound();
+}
+
+async function checkReminders() {
+  const notifications = await fetchDueNotifications();
+  updateNotificationBadge(notifications.length);
+  if (!notifications.length) return;
+  notifications.forEach(presentReminderNotification);
+}
+
+function wireReminderPolling() {
+  checkReminders();
+  setInterval(checkReminders, 60000);
 }
 
 async function ensureAuthenticated() {
@@ -70,7 +182,28 @@ function renderUserPill() {
   pill.querySelector(".email").textContent = user.email;
 }
 
+async function confirmLogout() {
+  if (window.Swal) {
+    const result = await Swal.fire({
+      title: "Confirm Logout",
+      text: "Are you sure you want to log out?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Logout",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      background: "var(--bg-1)",
+      color: "var(--text-hi)",
+    });
+    return result.isConfirmed;
+  }
+  return window.confirm("Are you sure you want to log out?");
+}
+
 async function logoutUser() {
+  const confirmed = await confirmLogout();
+  if (!confirmed) return;
+
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   } catch (err) {
@@ -199,6 +332,32 @@ function wireAIOrb() {
   window.TP_openAI = open;
 }
 
+function formatReminderSummary(date, time) {
+  if (!date || !time) return "No reminder set";
+  const parsed = new Date(`${date}T${time}`);
+  if (Number.isNaN(parsed.getTime())) return "Reminder set";
+  const dateLabel = parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const timeLabel = parsed.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `Reminder set: ${dateLabel} • ${timeLabel}`;
+}
+
+function setReminderUI() {
+  const reminderSummary = document.getElementById("reminderSummary");
+  if (!reminderSummary) return;
+  const reminderDateInput = document.getElementById("taskReminderDate");
+  const reminderTimeInput = document.getElementById("taskReminderTime");
+  const date = reminderDateInput?.value || "";
+  const time = reminderTimeInput?.value || "";
+  reminderSummary.textContent = formatReminderSummary(date, time);
+  if (date || time) {
+    reminderSummary.classList.add("has-reminder");
+    reminderSummary.setAttribute("aria-label", "Reminder set");
+  } else {
+    reminderSummary.classList.remove("has-reminder");
+    reminderSummary.setAttribute("aria-label", "No reminder set");
+  }
+}
+
 /* ---------------- task add/edit modal (shared) ---------------- */
 function wireTaskModal() {
   const scrim = document.getElementById("taskModalScrim");
@@ -215,9 +374,32 @@ function wireTaskModal() {
   const openers = document.querySelectorAll("[data-open-task-modal]");
   openers.forEach(btn => btn.addEventListener("click", () => openTaskModal()));
 
-  scrim.addEventListener("click", (e) => { if (e.target === scrim) closeTaskModal(); });
-  document.getElementById("taskModalClose")?.addEventListener("click", closeTaskModal);
-  document.getElementById("taskModalCancel")?.addEventListener("click", closeTaskModal);
+  const closeBtn = document.getElementById("taskModalClose");
+  const cancelBtn = document.getElementById("taskModalCancel");
+  closeBtn?.addEventListener("click", closeTaskModal);
+  cancelBtn?.addEventListener("click", closeTaskModal);
+  scrim.addEventListener("click", (event) => {
+    if (event.target === scrim) closeTaskModal();
+  });
+
+  const reminderSummary = document.getElementById("reminderSummary");
+  const addReminderBtn = document.getElementById("addReminderBtn");
+  const reminderPicker = document.getElementById("reminderPicker");
+  const reminderDateInput = document.getElementById("taskReminderDate");
+  const reminderTimeInput = document.getElementById("taskReminderTime");
+  const clearReminderBtn = document.getElementById("clearReminderBtn");
+
+  addReminderBtn?.addEventListener("click", () => {
+    reminderPicker?.classList.remove("hidden");
+    reminderDateInput?.focus();
+  });
+  reminderDateInput?.addEventListener("change", setReminderUI);
+  reminderTimeInput?.addEventListener("change", setReminderUI);
+  clearReminderBtn?.addEventListener("click", () => {
+    if (reminderDateInput) reminderDateInput.value = "";
+    if (reminderTimeInput) reminderTimeInput.value = "";
+    setReminderUI();
+  });
 
   document.querySelectorAll(".priority-opt").forEach(opt => {
     opt.addEventListener("click", () => {
@@ -227,9 +409,28 @@ function wireTaskModal() {
     });
   });
 
+  setReminderUI();
+
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = form.dataset.editingId;
+    const reminderDate = document.getElementById("taskReminderDate").value;
+    const reminderTime = document.getElementById("taskReminderTime").value;
+    if ((reminderDate && !reminderTime) || (!reminderDate && reminderTime)) {
+      notify("Please select both reminder date and time.", "error");
+      return;
+    }
+    const dueDate = document.getElementById("taskDueDate").value;
+    const dueTime = document.getElementById("taskDueTime").value;
+    if (reminderDate && reminderTime && dueDate) {
+      const dueValue = new Date(`${dueDate}T${dueTime || "23:59"}`);
+      const reminderValue = new Date(`${reminderDate}T${reminderTime}`);
+      if (Number.isNaN(dueValue.getTime()) || Number.isNaN(reminderValue.getTime()) || reminderValue > dueValue) {
+        notify("Reminder must be at or before the task due date and time.", "error");
+        return;
+      }
+    }
+
     const payload = {
       title: document.getElementById("taskTitle").value.trim(),
       description: document.getElementById("taskDescription").value.trim(),
@@ -237,7 +438,7 @@ function wireTaskModal() {
       priority: document.getElementById("taskPriority").value,
       due_date: document.getElementById("taskDueDate").value,
       due_time: document.getElementById("taskDueTime").value,
-      reminder_time: document.getElementById("taskReminderTime").value,
+      reminder_time: reminderDate && reminderTime ? `${reminderDate}T${reminderTime}` : null,
     };
     if (!payload.title) { notify("Task title is required", "error"); return; }
 
@@ -275,7 +476,9 @@ function openTaskModal(taskId = null) {
     document.getElementById("taskCategory").value = t.category;
     document.getElementById("taskDueDate").value = t.due_date || "";
     document.getElementById("taskDueTime").value = t.due_time || "";
-    document.getElementById("taskReminderTime").value = t.reminder_time || "";
+    const reminder = parseReminderValue(t.reminder_time, t.due_date);
+    document.getElementById("taskReminderDate").value = reminder?.date || "";
+    document.getElementById("taskReminderTime").value = reminder?.time || "";
     document.getElementById("taskPriority").value = t.priority;
     document.querySelector(`.priority-opt[data-value="${t.priority}"]`)?.classList.add("active");
   } else {
@@ -283,9 +486,26 @@ function openTaskModal(taskId = null) {
     title.textContent = "Add task";
     document.getElementById("taskDueDate").value = TP.todayISO(0);
     document.getElementById("taskPriority").value = "medium";
+    document.getElementById("taskReminderDate").value = "";
+    document.getElementById("taskReminderTime").value = "";
     document.querySelector(`.priority-opt[data-value="medium"]`)?.classList.add("active");
   }
+  document.getElementById("reminderPicker")?.classList.add("hidden");
+  setReminderUI();
   scrim.classList.add("show");
+}
+
+function parseReminderValue(raw, fallbackDate = null) {
+  if (!raw) return null;
+  if (raw.includes("T") || raw.includes(" ")) {
+    const [datePart, timePart] = raw.replace(" ", "T").split("T");
+    if (!datePart || !timePart) return null;
+    return { date: datePart, time: timePart.slice(0, 5) };
+  }
+  if (/^\d{2}:\d{2}$/.test(raw)) {
+    return { date: fallbackDate || "", time: raw };
+  }
+  return null;
 }
 function closeTaskModal() {
   document.getElementById("taskModalScrim")?.classList.remove("show");

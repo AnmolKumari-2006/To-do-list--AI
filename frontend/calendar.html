@@ -21,6 +21,7 @@
         <a class="nav-item" href="tasks.html"><i class="fa-solid fa-list-check"></i><span>Tasks</span></a>
         <a class="nav-item" href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
         <a class="nav-item" href="statistics.html"><i class="fa-solid fa-chart-pie"></i><span>Statistics</span></a>
+        <a class="nav-item" href="notifications.html"><i class="fa-solid fa-bell"></i><span>Notifications</span><span class="nav-badge"></span></a>
         <a class="nav-item" href="settings.html"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
       </div>
     </div>
@@ -28,7 +29,7 @@
       <div class="user-pill">
         <div class="avatar"></div>
         <div class="who"><div class="name"></div><div class="email"></div></div>
-        <button class="btn-icon" title="Log out" onclick="logoutUser()"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        <button class="btn-icon" title="Log out" onclick="logoutUser()"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
     </div>
   </aside>
@@ -116,7 +117,20 @@
           <div class="field"><label for="taskDueDate">Due date</label><input class="input" type="date" id="taskDueDate"></div>
           <div class="field"><label for="taskDueTime">Due time</label><input class="input" type="time" id="taskDueTime"></div>
         </div>
-        <div class="field"><label for="taskReminderTime">Reminder time</label><input class="input" type="time" id="taskReminderTime"></div>
+        <div class="field reminder-field">
+          <label>Reminder</label>
+          <div class="reminder-row">
+            <button type="button" class="btn btn-secondary" id="addReminderBtn"><i class="fa-solid fa-plus"></i> Add reminder</button>
+            <div id="reminderSummary" class="reminder-summary">No reminder set</div>
+          </div>
+          <div class="reminder-picker hidden" id="reminderPicker">
+            <div class="input-row">
+              <div class="field"><label for="taskReminderDate">Reminder date</label><input class="input" type="date" id="taskReminderDate"></div>
+              <div class="field"><label for="taskReminderTime">Reminder time</label><input class="input" type="time" id="taskReminderTime"></div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="clearReminderBtn">Remove reminder</button>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn btn-ghost" id="taskModalCancel">Cancel</button>

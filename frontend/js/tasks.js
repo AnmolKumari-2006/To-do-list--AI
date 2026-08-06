@@ -24,6 +24,10 @@ window.addEventListener("tp:tasks-changed", async () => {
   renderTaskList();
 });
 
+window.addEventListener("tp:time-updated", () => {
+  renderTaskList();
+});
+
 function wireSearch() {
   const input = document.getElementById("taskSearch");
   if (!input) return;
@@ -95,9 +99,9 @@ function getFilteredTasks() {
 
   switch (taskFilters.status) {
     case "completed": tasks = tasks.filter(t => t.status === "completed"); break;
-    case "pending": tasks = tasks.filter(t => t.status === "pending"); break;
-    case "today": tasks = tasks.filter(t => t.due_date === today); break;
-    case "upcoming": tasks = tasks.filter(t => t.due_date > today); break;
+    case "pending": tasks = tasks.filter(t => t.status === "pending" && !TP.store.isTaskOverdue(t)); break;
+    case "today": tasks = tasks.filter(t => TP.store.isTaskDueToday(t)); break;
+    case "upcoming": tasks = tasks.filter(t => TP.store.isTaskUpcoming(t)); break;
   }
   if (taskFilters.priority && taskFilters.priority !== "all") {
     tasks = tasks.filter(t => t.priority === taskFilters.priority);

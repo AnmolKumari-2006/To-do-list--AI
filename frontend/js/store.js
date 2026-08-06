@@ -13,6 +13,41 @@ const TP = (function () {
     return d.toISOString().slice(0, 10);
   }
 
+  function parseDueDateTime(task) {
+    if (!task || !task.due_date) return null;
+    const time = task.due_time || "23:59";
+    const [year, month, day] = task.due_date.split("-").map(Number);
+    const [hours, minutes] = time.split(":").map(Number);
+    if (![year, month, day].every(Number.isFinite) || ![hours, minutes].every(Number.isFinite)) return null;
+    const due = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    return Number.isNaN(due.getTime()) ? null : due;
+  }
+
+  function isTaskOverdue(task) {
+    if (!task || task.status === "completed") return false;
+    const due = parseDueDateTime(task);
+    return due ? new Date() > due : false;
+  }
+
+  function isTaskUpcoming(task) {
+    if (!task || task.status === "completed") return false;
+    const due = parseDueDateTime(task);
+    return due ? new Date() < due : false;
+  }
+
+  function isTaskDueToday(task) {
+    if (!task || !task.due_date) return false;
+    return task.due_date === todayISO(0);
+  }
+
+  function getTaskStatus(task) {
+    if (!task) return "pending";
+    if (task.status === "completed") return "completed";
+    if (isTaskOverdue(task)) return "overdue";
+    if (isTaskUpcoming(task)) return "upcoming";
+    return "pending";
+  }
+
   function load() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) {
@@ -142,18 +177,20 @@ const TP = (function () {
 
     getTasks() { return db.tasks; },
     getTask(id) { return db.tasks.find(t => String(t.id) === String(id)); },
+    isTaskOverdue,
+    isTaskUpcoming,
+    isTaskDueToday,
+    getTaskStatus,
 
     counts() {
       const tasks = db.tasks;
-      const today = todayISO(0);
-      const isOverdue = t => t.status !== "completed" && t.due_date && t.due_date < today;
       return {
         total: tasks.length,
         completed: tasks.filter(t => t.status === "completed").length,
-        pending: tasks.filter(t => t.status === "pending").length,
-        overdue: tasks.filter(isOverdue).length,
-        today: tasks.filter(t => t.due_date === today).length,
-        upcoming: tasks.filter(t => t.due_date > today && t.status !== "completed").length,
+        pending: tasks.filter(t => t.status === "pending" && !isTaskOverdue(t)).length,
+        overdue: tasks.filter(isTaskOverdue).length,
+        today: tasks.filter(isTaskDueToday).length,
+        upcoming: tasks.filter(isTaskUpcoming).length,
       };
     },
     todayISO,

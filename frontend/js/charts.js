@@ -17,6 +17,11 @@ window.addEventListener("tp:tasks-changed", async () => {
   renderBarChart();
 });
 
+window.addEventListener("tp:time-updated", async () => {
+  await TP.store.syncFromServer();
+  renderStatCards();
+});
+
 function isDark() { return document.documentElement.getAttribute("data-theme") !== "light"; }
 function axisColor() { return isDark() ? "#aab1cc" : "#565b7d"; }
 function gridColor() { return isDark() ? "rgba(255,255,255,.06)" : "rgba(20,22,50,.06)"; }

@@ -20,6 +20,13 @@ window.addEventListener("tp:tasks-changed", async () => {
   renderAIRecommendation();
 });
 
+window.addEventListener("tp:time-updated", () => {
+  renderDashStats();
+  renderTodayList();
+  renderProgressRing();
+  renderAIRecommendation();
+});
+
 function renderGreeting() {
   const el = document.getElementById("greetingName");
   if (!el) return;
